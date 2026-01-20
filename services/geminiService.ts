@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Message, Role, Attachment, GroundingSource } from "../types";
-import { SYSTEM_INSTRUCTION, MODEL_NAME } from "../constants";
+import { SYSTEM_INSTRUCTION } from "../constants";
 
 // Initialize the API client
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -10,6 +10,7 @@ interface SendMessageOptions {
   newMessage: string;
   attachments?: Attachment[];
   useSearch: boolean;
+  modelId: string;
   onChunk: (text: string) => void;
   onGrounding: (sources: GroundingSource[]) => void;
 }
@@ -19,6 +20,7 @@ export const streamGeminiResponse = async ({
   newMessage,
   attachments = [],
   useSearch,
+  modelId,
   onChunk,
   onGrounding
 }: SendMessageOptions) => {
@@ -73,7 +75,7 @@ export const streamGeminiResponse = async ({
 
     // 4. Send Request
     const result = await ai.models.generateContentStream({
-      model: MODEL_NAME,
+      model: modelId,
       contents: contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -110,6 +112,13 @@ export const streamGeminiResponse = async ({
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    onChunk("Ошибка: " + (error instanceof Error ? error.message : "Произошла неизвестная ошибка при обращении к API."));
+    let errorMessage = "Произошла неизвестная ошибка.";
+    if (error instanceof Error) {
+       errorMessage = error.message;
+       if (errorMessage.includes("429") || errorMessage.includes("quota")) {
+         errorMessage = "Превышен лимит запросов API (429). Попробуйте сменить модель на 'Gemini 3 Flash' в боковом меню или подождите немного.";
+       }
+    }
+    onChunk("Ошибка: " + errorMessage);
   }
 };

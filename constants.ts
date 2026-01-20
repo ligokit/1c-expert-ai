@@ -1,3 +1,4 @@
+
 export const SYSTEM_INSTRUCTION = `
 Ты — опытный консультант и старший разработчик, специализирующийся на платформе "1С:Предприятие". Твоя задача — помогать пользователям, предоставляя исчерпывающие, точные и практичные решения.
 
@@ -18,4 +19,9 @@ export const SYSTEM_INSTRUCTION = `
 -   Всегда отвечай на русском языке.
 `;
 
-export const MODEL_NAME = 'gemini-3-pro-preview'; // Модель с высокой способностью к рассуждению
+export const MODELS = [
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Быстрая)', description: 'Быстрая, экономная, для простых задач' },
+  { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro (Умная)', description: 'Для сложных рассуждений и анализа' }
+];
+
+export const DEFAULT_MODEL = 'gemini-3-flash-preview';

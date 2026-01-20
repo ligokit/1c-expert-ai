@@ -5,16 +5,24 @@ import MessageBubble from './components/MessageBubble';
 import InputArea from './components/InputArea';
 import { ChatSession, Message, Role, Attachment } from './types';
 import { streamGeminiResponse } from './services/geminiService';
+import { DEFAULT_MODEL } from './constants';
 
 const App: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_MODEL);
 
   // Load from local storage on mount
   useEffect(() => {
     const stored = localStorage.getItem('1c_chat_sessions');
+    const storedModel = localStorage.getItem('1c_chat_model');
+    
+    if (storedModel) {
+      setCurrentModelId(storedModel);
+    }
+
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -39,16 +47,12 @@ const App: React.FC = () => {
     const saveToStorage = () => {
       try {
         if (sessions.length > 0) {
-          // CRITICAL FIX: Strip heavy base64 data from attachments before saving to LocalStorage
-          // LocalStorage has a 5MB limit. A 16MB PDF will crash the app immediately.
           const safeSessions = sessions.map(session => ({
             ...session,
             messages: session.messages.map(msg => ({
               ...msg,
               attachments: msg.attachments?.map(att => ({
                 ...att,
-                // Don't save the actual data string to local storage to prevent quotas exceeded
-                // We keep the metadata so the UI looks correct on reload
                 data: '' 
               }))
             }))
@@ -57,22 +61,24 @@ const App: React.FC = () => {
           try {
              localStorage.setItem('1c_chat_sessions', JSON.stringify(safeSessions));
           } catch (innerError) {
-             console.warn("LocalStorage save failed (likely quota). clearing old sessions might help.", innerError);
-             // As a fallback, try to save only the current session or nothing to prevent crash loop
+             console.warn("LocalStorage save failed", innerError);
           }
         } else {
           localStorage.setItem('1c_chat_sessions', JSON.stringify([]));
         }
       } catch (e) {
-        // Catch QuotaExceededError or JSON errors so the app doesn't crash (White Screen of Death)
-        console.warn("LocalStorage error. Session history not saved fully.", e);
+        console.warn("LocalStorage error", e);
       }
     };
     
-    // Debounce saving slightly to avoid heavy operations on every keystroke
     const timeoutId = setTimeout(saveToStorage, 500);
     return () => clearTimeout(timeoutId);
   }, [sessions]);
+
+  const handleModelChange = (modelId: string) => {
+    setCurrentModelId(modelId);
+    localStorage.setItem('1c_chat_model', modelId);
+  };
 
   const createNewSession = () => {
     const newSession: ChatSession = {
@@ -86,11 +92,9 @@ const App: React.FC = () => {
   };
 
   const deleteSession = (id: string) => {
-    // Robust delete logic that handles race conditions better
     const updatedSessions = sessions.filter(s => s.id !== id);
     
     if (updatedSessions.length === 0) {
-      // If we deleted the last session, we must create a new one immediately
       const newSession = {
         id: uuidv4(),
         title: 'Новый чат',
@@ -100,7 +104,6 @@ const App: React.FC = () => {
       setSessions([newSession]);
       setCurrentSessionId(newSession.id);
     } else {
-      // If there are sessions left, update list and switch if needed
       setSessions(updatedSessions);
       if (currentSessionId === id) {
         setCurrentSessionId(updatedSessions[0].id);
@@ -119,6 +122,7 @@ const App: React.FC = () => {
         newMessage: text,
         attachments: attachments,
         useSearch: useSearch,
+        modelId: currentModelId,
         onChunk: (chunkText) => {
           setSessions(prev => prev.map(s => {
             if (s.id === currentSessionId) {
@@ -171,7 +175,7 @@ const App: React.FC = () => {
              msgs[lastMsgIndex] = {
                ...lastMsg,
                isThinking: false,
-               text: lastMsg.text || "Не удалось получить ответ от сервера."
+               text: lastMsg.text || "Не удалось получить ответ от сервера. Попробуйте сменить модель."
              };
           }
           return { ...s, messages: msgs };
@@ -192,7 +196,6 @@ const App: React.FC = () => {
       attachments: attachments
     };
 
-    // Update state with user message and placeholder
     setSessions(prev => prev.map(s => {
       if (s.id === currentSessionId) {
         const title = s.messages.length === 0 ? (text.slice(0, 30) + (text.length > 30 ? '...' : '')) : s.title;
@@ -253,9 +256,11 @@ const App: React.FC = () => {
         isOpen={isSidebarOpen}
         sessions={sessions}
         currentSessionId={currentSessionId}
+        currentModelId={currentModelId}
         onSelectSession={setCurrentSessionId}
         onNewChat={createNewSession}
         onDeleteSession={deleteSession}
+        onSelectModel={handleModelChange}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
@@ -270,16 +275,17 @@ const App: React.FC = () => {
           <span className="font-serif font-bold ml-2">1C Эксперт AI</span>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
-          <div className="max-w-4xl mx-auto min-h-[calc(100vh-180px)]">
+        {/* Chat Area - UPDATED LAYOUT */}
+        {/* If messages exist, allow scrolling. If empty, center content without scroll. */}
+        <div className={`flex-1 ${currentSession?.messages.length === 0 ? 'flex flex-col justify-center items-center p-4 overflow-hidden' : 'overflow-y-auto p-4 md:p-8 scroll-smooth'}`}>
+          <div className={`${currentSession?.messages.length === 0 ? 'w-full max-w-lg' : 'max-w-4xl mx-auto w-full'}`}>
             {currentSession?.messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center mt-20 opacity-80 animate-fadeIn">
+              <div className="flex flex-col items-center justify-center text-center opacity-80 animate-fadeIn">
                  <div className="w-16 h-16 bg-[#d97757] rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                     <span className="text-3xl text-white font-serif">1C</span>
                  </div>
                  <h2 className="text-2xl font-serif text-gray-800 mb-2">Добро пожаловать в 1C Эксперт AI</h2>
-                 <p className="text-gray-500 max-w-md">
+                 <p className="text-gray-500 max-w-md mx-auto">
                    Я помогу создать базы 1С, написать код на встроенном языке и исправить ошибки конфигурации. 
                    Загрузите файлы (PDF, Excel, Word) или скриншоты для анализа.
                  </p>
