@@ -1,104 +1,121 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>1C Expert AI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              serif: ['Merriweather', 'serif'],
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>1C Expert AI</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Merriweather', 'serif'],
+          },
+          colors: {
+            claude: {
+              bg: '#fcfcf9',
+              sidebar: '#f5f5f2',
+              text: '#333333',
+              accent: '#d97757', // Burnt orange-ish
+              input: '#ffffff',
+            }
+          },
+          animation: {
+            fadeIn: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            appear: 'appear 0.3s ease-out forwards',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(8px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
             },
-            colors: {
-              claude: {
-                bg: '#fcfcf9',
-                sidebar: '#f5f5f2',
-                text: '#333333',
-                accent: '#d97757', // Burnt orange-ish
-                input: '#ffffff',
-              }
-            },
-            animation: {
-              fadeIn: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              appear: 'appear 0.3s ease-out forwards',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(8px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
-              appear: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              }
+            appear: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
             }
           }
         }
       }
-    </script>
-    <style>
-      body {
-        background-color: #fcfcf9;
-        color: #333333;
-      }
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #d1d5db; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #9ca3af; 
-      }
-      
-      /* Markdown Styles Override */
-      .markdown-body p {
-        margin-bottom: 1rem;
-        line-height: 1.7;
-      }
-      .markdown-body h1, .markdown-body h2, .markdown-body h3 {
-        font-weight: 600;
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
-        font-family: 'Merriweather', serif;
-      }
-      .markdown-body ul {
-        list-style-type: disc;
-        padding-left: 1.5rem;
-        margin-bottom: 1rem;
-      }
-      .markdown-body ol {
-        list-style-type: decimal;
-        padding-left: 1.5rem;
-        margin-bottom: 1rem;
-      }
-      .markdown-body a {
-        color: #d97757;
-        text-decoration: underline;
-      }
-      /* Code block styling handled by component now, but keep basic pre style as fallback */
-      .markdown-body pre {
-        margin: 1em 0;
-        border-radius: 0.5rem;
-      }
-      /* Smooth transitions for text updates */
-      .markdown-body {
-        transition: height 0.2s ease;
-      }
-    </style>
+    }
+  </script>
+  <style>
+    body {
+      background-color: #fcfcf9;
+      color: #333333;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    /* Markdown Styles Override */
+    .markdown-body p {
+      margin-bottom: 1rem;
+      line-height: 1.7;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3 {
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-family: 'Merriweather', serif;
+    }
+
+    .markdown-body ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .markdown-body ol {
+      list-style-type: decimal;
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .markdown-body a {
+      color: #d97757;
+      text-decoration: underline;
+    }
+
+    /* Code block styling handled by component now, but keep basic pre style as fallback */
+    .markdown-body pre {
+      margin: 1em 0;
+      border-radius: 0.5rem;
+    }
+
+    /* Smooth transitions for text updates */
+    .markdown-body {
+      transition: height 0.2s ease;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -115,10 +132,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>
