@@ -75,16 +75,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, isLast, onC
   const isUser = message.role === Role.USER;
   const [showSources, setShowSources] = useState(false);
   const hasSources = message.groundingSources && message.groundingSources.length > 0;
-  
-  // Smooth Text / Typewriter Effect State
   const [displayedText, setDisplayedText] = useState(message.text);
 
+  // Check if message is an error
+  const isError = message.text.startsWith('Ошибка:') || message.text.includes('{"error":');
+
   useEffect(() => {
-    // Determine if we should animate:
-    // 1. Must be the last message.
-    // 2. Must be from the model.
-    // 3. App must be in loading/streaming state OR text is still catching up.
-    // If we loaded from history (not streaming), we show text immediately.
     const shouldAnimate = isLast && message.role === Role.MODEL && isLoading;
 
     if (!shouldAnimate) {
@@ -94,25 +90,52 @@ const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, isLast, onC
 
     if (displayedText === message.text) return;
 
-    // If text was reset or cleared, update immediately
     if (message.text.length < displayedText.length) {
        setDisplayedText(message.text);
        return;
     }
 
-    // Typewriter logic
     const timeout = setTimeout(() => {
        setDisplayedText(prev => {
           const delta = message.text.length - prev.length;
-          // Adaptive speed: faster if we are far behind, slower if close
-          // Minimum 1 char, maximum 5 chars per tick to ensure fluidity
           const chunk = Math.max(1, Math.min(5, Math.ceil(delta / 2))); 
           return message.text.slice(0, prev.length + chunk);
        });
-    }, 15); // Update every 15ms
+    }, 15);
     
     return () => clearTimeout(timeout);
   }, [message.text, isLast, isLoading, message.role, displayedText]);
+
+  // Clean Error Rendering
+  if (isError) {
+    let cleanError = message.text.replace('Ошибка:', '').trim();
+    // Try to remove raw JSON if it leaked
+    if (cleanError.includes('{"error":')) {
+       try {
+         const jsonPart = cleanError.match(/\{.*\}/);
+         if (jsonPart) {
+           const parsed = JSON.parse(jsonPart[0]);
+           cleanError = parsed.error?.message || "Неизвестная ошибка API";
+         }
+       } catch (e) {
+         // keep original if parsing fails
+       }
+    }
+
+    return (
+      <div className={`flex w-full mb-6 justify-start animate-fadeIn`}>
+         <div className="max-w-4xl w-full px-5 py-4 rounded-2xl bg-red-50 border border-red-100 text-red-800">
+            <div className="flex items-center mb-2 font-bold text-red-600 text-sm uppercase tracking-wide">
+              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Ошибка генерации
+            </div>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{cleanError}</p>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
@@ -125,12 +148,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, isLast, onC
           }
         `}
       >
-        {/* Header: Name */}
         <div className="text-xs font-semibold mb-2 text-gray-400 uppercase tracking-wider flex items-center gap-2 select-none">
           {isUser ? 'Вы' : '1C Эксперт AI'}
         </div>
 
-        {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {message.attachments.map((att, idx) => (
@@ -144,7 +165,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, isLast, onC
           </div>
         )}
 
-        {/* Grounding Sources (Search Results) */}
         {hasSources && (
           <div className="mb-4">
             <button
@@ -184,7 +204,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, isLast, onC
           </div>
         )}
 
-        {/* Message Text */}
         {message.isThinking ? (
            <div className="flex items-center space-x-1.5 text-gray-400 py-1">
              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
@@ -201,11 +220,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message, isLast, onC
             >
               {displayedText}
             </ReactMarkdown>
-            {/* Invisible element to ensure container height doesn't jump too much if we wanted to pre-allocate, but not needed for markdown */}
           </div>
         )}
         
-        {/* Continue Button */}
         {!isUser && isLast && !isLoading && !message.isThinking && (
           <div className="mt-3 animate-fadeIn">
              <button 
