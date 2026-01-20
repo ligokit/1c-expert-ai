@@ -30,6 +30,9 @@ export const streamGeminiResponse = async ({
   const maxRetries = 3;
   let currentModelId = modelId;
 
+  // Track if we switched models to avoid infinite loops or confusing messages
+  let hasSwitchedModel = false;
+
   while (attempt <= maxRetries) {
     try {
       // 1. Prepare Tools
@@ -127,17 +130,28 @@ export const streamGeminiResponse = async ({
 
       // Only retry on 503 (Server Error) or 429 (Rate Limit)
       if ((isOverloaded || isQuota) && attempt < maxRetries) {
-        const delay = 1500 * Math.pow(2, attempt); // Exponential backoff: 1.5s, 3s, 6s
-        console.log(`Retrying in ${delay}ms...`);
+        const delay = 1500 * Math.pow(2, attempt); // Exponential backoff
         
-        // INTELLIGENT FALLBACK:
-        // If we hit a quota limit (429) AND Search is enabled AND we aren't already using the stable experimental model:
-        // Switch to 'gemini-2.0-flash-exp' which often has separate/better limits for tools.
-        if (isQuota && useSearch && currentModelId !== 'gemini-2.0-flash-exp') {
-            currentModelId = 'gemini-2.0-flash-exp';
-            onChunk("⚠️ Лимит модели при поиске (429). Переключение на Gemini 2.0 Flash...");
-        } else if (attempt === 0) {
-             onChunk("Сервер занят, повторная попытка...");
+        // INTELLIGENT FALLBACK STRATEGY
+        
+        // 1. If we are on 3.0 Flash AND hit a quota limit with Search -> Try 2.0 Flash
+        if (isQuota && useSearch && currentModelId.includes('gemini-3-flash') && !hasSwitchedModel) {
+            currentModelId = 'gemini-2.0-flash';
+            hasSwitchedModel = true;
+            onChunk("⚠️ Лимит модели 3.0 при поиске. Переключение на Gemini 2.0 Flash...");
+        } 
+        // 2. If we are on 2.0 Flash AND hit a 503/429 -> Fallback to 3.0 Flash (it's often more available for non-search or just luckier)
+        else if (currentModelId.includes('gemini-2.0') && !hasSwitchedModel) {
+            currentModelId = 'gemini-3-flash-preview';
+            hasSwitchedModel = true;
+            onChunk("⚠️ Gemini 2.0 занят. Переключение на Gemini 3.0 Flash...");
+        }
+        // 3. Just a standard retry on the same model
+        else {
+            // Don't show "Server busy" on first silent retry to reduce noise unless it's a long wait
+             if (attempt > 0) {
+                onChunk("Сервер занят, повторная попытка...");
+             }
         }
 
         await sleep(delay);
@@ -149,7 +163,7 @@ export const streamGeminiResponse = async ({
       let finalErrorMsg = "Произошла неизвестная ошибка.";
       
       if (isQuota) {
-        finalErrorMsg = `Превышен лимит запросов (429). \n\nЭто частая проблема при использовании веб-поиска на бесплатных тарифах. \nПопробуйте отключить "Web" или подождите немного.`;
+        finalErrorMsg = `Превышен лимит запросов (429). \n\nВсе попытки переключения моделей исчерпаны. Попробуйте отключить "Web" или подождите немного.`;
       } else if (isOverloaded) {
         finalErrorMsg = "Серверы Google перегружены (503). Пожалуйста, подождите минуту и попробуйте снова.";
       } else if (errorMessage) {

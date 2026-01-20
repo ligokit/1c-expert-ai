@@ -21,7 +21,7 @@ export const SYSTEM_INSTRUCTION = `
 
 export const MODELS = [
   { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Быстрая)', description: 'Быстрая, экономная, для простых задач' },
-  { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Стабильная)', description: 'Стабильная версия, лучше работает с поиском' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Стабильная)', description: 'Стабильная версия, лучше работает с поиском' },
   { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro (Умная)', description: 'Для сложных рассуждений и анализа' }
 ];
 
